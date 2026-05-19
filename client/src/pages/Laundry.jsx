@@ -45,19 +45,19 @@ export default function Laundry({ basePath = '/manager/laundry', hinglish = fals
   const t = hinglish
     ? {
         title: 'Laundry',
-        subtitle: 'Saaman kab gaya, kab wapas aaya',
-        newBtn: 'Naya pickup',
-        outAt: 'Abhi laundry mein',
-        recent: 'Pichle 20',
-        empty: 'Abhi kuch laundry mein nahi.',
+        subtitle: 'Vendor ko diya / wapas liya — sab record yahan.',
+        newBtn: 'Vendor ko dena',
+        outAt: 'Vendor ke paas hai',
+        recent: 'Wapas aa gaya',
+        empty: 'Abhi vendor ke paas kuch nahi.',
         emptyRecent: 'Abhi koi history nahi.',
       }
     : {
         title: 'Laundry',
-        subtitle: 'Dual-counted handoff record (pickup + return).',
-        newBtn: 'New pickup',
+        subtitle: 'Dual-counted handoff record (out and back).',
+        newBtn: 'Give to vendor',
         outAt: 'Out at vendor',
-        recent: 'Recent (last 20)',
+        recent: 'Returned (last 20)',
         empty: 'Nothing currently with a vendor.',
         emptyRecent: 'No history yet.',
       }

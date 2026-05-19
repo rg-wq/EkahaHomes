@@ -112,8 +112,8 @@ export default function LaundryNew({ basePath = '/manager/laundry', hinglish = f
   const t = hinglish
     ? {
         back: 'Wapas',
-        title: 'Naya pickup',
-        subtitle: 'Vendor ke saath count karein, phir save karein.',
+        title: 'Vendor ko saaman dena',
+        subtitle: 'Vendor ke saath gin lein, phir save karein.',
         property: 'Konsi property?',
         vendor: 'Vendor ka naam',
         vendorPhone: 'Vendor phone (optional)',
@@ -125,12 +125,12 @@ export default function LaundryNew({ basePath = '/manager/laundry', hinglish = f
         otherName: 'Doosra naam (item not in list)',
         qty: 'Kitne?',
         notes: 'Note (optional)',
-        save: 'Save pickup',
+        save: 'Vendor ko de diya',
         saving: 'Save ho raha hai…',
       }
     : {
         back: 'Back',
-        title: 'New pickup',
+        title: 'Give items to vendor',
         subtitle: 'Count items with vendor, then save.',
         property: 'Property',
         vendor: 'Vendor name',
@@ -143,7 +143,7 @@ export default function LaundryNew({ basePath = '/manager/laundry', hinglish = f
         otherName: 'Name (if not in list)',
         qty: 'Qty',
         notes: 'Notes (optional)',
-        save: 'Save pickup',
+        save: 'Confirm handover',
         saving: 'Saving…',
       }
 
