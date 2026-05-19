@@ -3,6 +3,9 @@ import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import Login from './pages/Login'
 import Inventory from './pages/Inventory'
+import Laundry from './pages/Laundry'
+import LaundryNew from './pages/LaundryNew'
+import LaundryDetail from './pages/LaundryDetail'
 
 import OwnerLayout from './pages/owner/OwnerLayout'
 import OwnerDashboard from './pages/owner/Dashboard'
@@ -55,6 +58,9 @@ export default function App() {
           <Route path="templates/:id" element={<TemplateEditor />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="ledger" element={<OwnerLedger />} />
+          <Route path="laundry" element={<Laundry basePath="/owner/laundry" />} />
+          <Route path="laundry/new" element={<LaundryNew basePath="/owner/laundry" />} />
+          <Route path="laundry/:id" element={<LaundryDetail basePath="/owner/laundry" />} />
           <Route path="staff" element={<Placeholder title="Staff" />} />
         </Route>
 
@@ -70,6 +76,9 @@ export default function App() {
           <Route path="qc" element={<QC />} />
           <Route path="qc/:jobId" element={<QCReview />} />
           <Route path="inventory" element={<Inventory />} />
+          <Route path="laundry" element={<Laundry basePath="/manager/laundry" />} />
+          <Route path="laundry/new" element={<LaundryNew basePath="/manager/laundry" />} />
+          <Route path="laundry/:id" element={<LaundryDetail basePath="/manager/laundry" />} />
           <Route path="ledger" element={<StaffLedger />} />
           <Route path="ledger/:staffId" element={<StaffLedgerDetail />} />
           <Route path="assign-job" element={<AssignJob />} />
@@ -86,6 +95,9 @@ export default function App() {
           <Route index element={<StaffHome />} />
           <Route path="checkin" element={<CheckIn />} />
           <Route path="checklist/:jobId" element={<Checklist />} />
+          <Route path="laundry" element={<Laundry basePath="/staff/laundry" hinglish />} />
+          <Route path="laundry/new" element={<LaundryNew basePath="/staff/laundry" hinglish />} />
+          <Route path="laundry/:id" element={<LaundryDetail basePath="/staff/laundry" hinglish />} />
           <Route path="expense" element={<LogExpense />} />
           <Route path="ledger" element={<MyLedger />} />
         </Route>
