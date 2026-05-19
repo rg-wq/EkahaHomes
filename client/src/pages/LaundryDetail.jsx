@@ -59,15 +59,16 @@ export default function LaundryDetail({ basePath = '/manager/laundry', hinglish 
     mutationFn: async () => {
       const enriched = returnItems.map((it) => {
         const sent = Number(it.sent_qty) || 0
-        const returned = Math.max(0, Number(it.returned_qty) || 0)
-        const defect = Math.max(0, Number(it.defect_qty) || 0)
+        const cleanReturned = Math.max(0, Number(it.returned_qty) || 0)
+        const damaged = Math.max(0, Number(it.defect_qty) || 0)
+        const lost = Math.max(0, sent - cleanReturned - damaged)
         return {
           item_id: it.item_id,
           name: it.name,
           sent_qty: sent,
-          returned_qty: returned,
-          shortfall: Math.max(0, sent - returned),
-          defect_qty: defect,
+          returned_qty: cleanReturned, // now = clean only; trigger adds this to cupboard
+          shortfall: lost,
+          defect_qty: damaged,
         }
       })
 
@@ -96,47 +97,55 @@ export default function LaundryDetail({ basePath = '/manager/laundry', hinglish 
   const t = hinglish
     ? {
         back: 'Wapas',
-        pickup: 'Pickup',
+        pickup: 'Vendor ko diya',
         return: 'Wapasi count',
         sent: 'Bheja',
-        returned: 'Wapas aaya',
+        returned: 'Saaf aaya',
         defect: 'Kharab',
+        lost: 'Kho gaya',
         notes: 'Note (optional)',
         defectPhotos: 'Kharab items ki photo',
         addPhoto: 'Photo add karein',
         closeBtn: 'Close challan',
         closing: 'Close ho raha hai…',
         closed: 'Challan band ho gaya',
-        shortfall: 'Shortfall',
-        defectTotal: 'Damaged',
         vendor: 'Vendor',
         property: 'Property',
+        helpDefect:
+          'Kharab items: agar vendor dobara dhone ke liye le gaya, to naya pickup banaiyega.',
       }
     : {
         back: 'Back',
-        pickup: 'Pickup',
+        pickup: 'Given',
         return: 'Return count',
         sent: 'Sent',
-        returned: 'Returned',
+        returned: 'Returned clean',
         defect: 'Damaged',
+        lost: 'Lost',
         notes: 'Notes (optional)',
         defectPhotos: 'Defect photos',
         addPhoto: 'Add photo',
         closeBtn: 'Close challan',
         closing: 'Closing…',
         closed: 'Challan closed',
-        shortfall: 'Shortfall',
-        defectTotal: 'Damaged',
         vendor: 'Vendor',
         property: 'Property',
+        helpDefect:
+          'Damaged items: if vendor took them back to re-launder, create a new pickup for them.',
       }
 
   if (isLoading) return <p className="text-sm text-slate-400">Loading…</p>
   if (!challan) return <p className="text-sm text-red-600">Challan not found.</p>
 
   const isOpen = challan.status === 'in_laundry'
-  const computedShort = returnItems.reduce(
-    (s, it) => s + Math.max(0, Number(it.sent_qty || 0) - Number(it.returned_qty || 0)),
+  // "Lost" = sent minus everything we got back (clean + damaged)
+  const computedLost = returnItems.reduce(
+    (s, it) =>
+      s +
+      Math.max(
+        0,
+        Number(it.sent_qty || 0) - Number(it.returned_qty || 0) - Number(it.defect_qty || 0),
+      ),
     0,
   )
   const computedDefect = returnItems.reduce((s, it) => s + Number(it.defect_qty || 0), 0)
@@ -208,45 +217,62 @@ export default function LaundryDetail({ basePath = '/manager/laundry', hinglish 
         <div className="mt-2 space-y-2">
           {returnItems.map((it, idx) => {
             const sent = Number(it.sent_qty || 0)
-            const ret = Number(it.returned_qty || 0)
-            const short = Math.max(0, sent - ret)
+            const clean = Number(it.returned_qty || 0)
+            const damaged = Number(it.defect_qty || 0)
+            const lost = Math.max(0, sent - clean - damaged)
             return (
               <div key={idx} className="rounded-lg ring-1 ring-slate-200 p-3">
                 <div className="flex items-center justify-between text-sm font-medium text-slate-900">
                   <span>{it.name}</span>
-                  {short > 0 && (
-                    <span className="inline-flex items-center gap-1 text-xs text-amber-700">
-                      <AlertTriangle className="h-3 w-3" /> -{short}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 text-xs">
+                    {damaged > 0 && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+                        {damaged} {t.defect.toLowerCase()}
+                      </span>
+                    )}
+                    {lost > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-red-800">
+                        <AlertTriangle className="h-3 w-3" /> {lost} {t.lost.toLowerCase()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                <div className="mt-2 grid grid-cols-4 gap-2 text-xs">
                   <div>
                     <label className="block text-slate-500">{t.sent}</label>
                     <input type="number" disabled className="input !py-1 text-sm bg-slate-50" value={sent} />
                   </div>
                   <div>
-                    <label className="block text-slate-500">{t.returned}</label>
+                    <label className="block font-medium text-green-700">{t.returned}</label>
                     <input
                       type="number"
                       min={0}
                       max={sent}
                       className="input !py-1 text-sm"
-                      value={ret}
+                      value={clean}
                       onChange={(e) => updateReturnItem(idx, { returned_qty: e.target.value })}
                       disabled={!isOpen}
                     />
                   </div>
                   <div>
-                    <label className="block text-slate-500">{t.defect}</label>
+                    <label className="block text-amber-700">{t.defect}</label>
                     <input
                       type="number"
                       min={0}
-                      max={ret}
+                      max={sent - clean}
                       className="input !py-1 text-sm"
-                      value={it.defect_qty || 0}
+                      value={damaged}
                       onChange={(e) => updateReturnItem(idx, { defect_qty: e.target.value })}
                       disabled={!isOpen}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-red-700">{t.lost}</label>
+                    <input
+                      type="number"
+                      disabled
+                      className="input !py-1 text-sm bg-slate-50"
+                      value={lost}
                     />
                   </div>
                 </div>
@@ -255,16 +281,20 @@ export default function LaundryDetail({ basePath = '/manager/laundry', hinglish 
           })}
         </div>
 
-        {(computedShort > 0 || computedDefect > 0) && isOpen && (
-          <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900">
-            {computedShort > 0 && (
+        {isOpen && (
+          <p className="mt-3 text-xs text-slate-500">{t.helpDefect}</p>
+        )}
+
+        {(computedLost > 0 || computedDefect > 0) && isOpen && (
+          <div className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-900 space-y-1">
+            {computedLost > 0 && (
               <p>
-                <strong>{computedShort}</strong> items missing → will be flagged in inventory ledger.
+                <strong>{computedLost}</strong> items lost (vendor couldn't return) → flagged in inventory ledger.
               </p>
             )}
             {computedDefect > 0 && (
               <p>
-                <strong>{computedDefect}</strong> damaged → upload photos as proof below.
+                <strong>{computedDefect}</strong> damaged → upload photos as proof below. Cupboard won't credit these.
               </p>
             )}
           </div>
