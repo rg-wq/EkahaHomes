@@ -1,17 +1,21 @@
 -- ============================================================================
 -- StayOps — Module 7 (Laundry challan) minimal v1
 -- No vendor OTP — staff handles both sides, witnesses vendor verbally.
--- Run after the first 4 migrations.
+-- Idempotent: safe to re-run.
 -- ============================================================================
 
 -- ----------------------------------------------------------------------------
--- Enum
+-- Enum (idempotent via DO block)
 -- ----------------------------------------------------------------------------
-create type challan_status as enum (
-  'in_laundry',     -- pickup logged, items at vendor
-  'closed',         -- returned + counted + finalized
-  'disputed'        -- shortfall / damage in dispute (future)
-);
+do $$ begin
+  create type challan_status as enum (
+    'in_laundry',
+    'closed',
+    'disputed'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
 -- ----------------------------------------------------------------------------
 -- Sequential challan numbers: CH-2026-001, CH-2026-002, etc.
@@ -29,25 +33,22 @@ $$;
 -- ----------------------------------------------------------------------------
 -- challans table
 -- ----------------------------------------------------------------------------
-create table public.challans (
+create table if not exists public.challans (
   id uuid primary key default gen_random_uuid(),
   challan_number text not null unique default public.gen_challan_number(),
   property_id text not null references public.properties(id) on delete restrict,
 
-  -- Vendor as free text in v1; FK to suppliers when supplier mgmt UI lands
   vendor_name text not null,
   vendor_phone text,
 
   status challan_status not null default 'in_laundry',
 
-  -- pickup_items: [{ item_id, name, qty }]  -- item_id nullable for "other"
   pickup_items jsonb not null default '[]'::jsonb,
   pickup_at timestamptz not null default now(),
   pickup_staff_id uuid references public.profiles(id),
   pickup_notes text,
   vendor_acknowledged boolean not null default false,
 
-  -- return_items: [{ item_id, name, sent_qty, returned_qty, shortfall, defect_qty }]
   return_items jsonb not null default '[]'::jsonb,
   return_at timestamptz,
   return_staff_id uuid references public.profiles(id),
@@ -62,21 +63,17 @@ create table public.challans (
   updated_at timestamptz not null default now()
 );
 
-create index idx_challans_property_status on public.challans(property_id, status);
-create index idx_challans_pickup_at on public.challans(pickup_at desc);
-create index idx_challans_open on public.challans(status) where status = 'in_laundry';
+create index if not exists idx_challans_property_status on public.challans(property_id, status);
+create index if not exists idx_challans_pickup_at on public.challans(pickup_at desc);
+create index if not exists idx_challans_open on public.challans(status) where status = 'in_laundry';
 
+drop trigger if exists trg_challans_updated_at on public.challans;
 create trigger trg_challans_updated_at
   before update on public.challans
   for each row execute function public.touch_updated_at();
 
 -- ----------------------------------------------------------------------------
 -- Inventory wire — fires when challan closes (return is finalized).
--- For each return_item with a linked item_id and returned_qty > 0:
---   - insert laundry_return ledger row (+returned_qty, cupboard) → trigger updates qty
---   - if shortfall > 0, insert audit-only laundry_shortfall row (qty=0)
---     The shortfall isn't deducted from cupboard because the item was already
---     deducted when staff used it in the room (the dirty item went to laundry).
 -- ----------------------------------------------------------------------------
 create or replace function public.apply_laundry_return()
 returns trigger
@@ -89,7 +86,6 @@ declare
   total_short integer := 0;
   total_def integer := 0;
 begin
-  -- Only act on transition INTO 'closed'
   if new.status = 'closed' and (tg_op = 'INSERT' or old.status is distinct from 'closed') then
     for item in select * from jsonb_array_elements(new.return_items)
     loop
@@ -133,7 +129,6 @@ begin
       total_def := total_def + coalesce((item->>'defect_qty')::int, 0);
     end loop;
 
-    -- Update summary fields (use a different code path to avoid trigger recursion)
     new.total_shortfall_qty := total_short;
     new.total_defect_qty := total_def;
     if new.closed_at is null then
@@ -144,6 +139,7 @@ begin
 end;
 $$;
 
+drop trigger if exists trg_apply_laundry_return on public.challans;
 create trigger trg_apply_laundry_return
   before insert or update on public.challans
   for each row execute function public.apply_laundry_return();
@@ -153,16 +149,19 @@ create trigger trg_apply_laundry_return
 -- ----------------------------------------------------------------------------
 alter table public.challans enable row level security;
 
+drop policy if exists "challans: read all auth" on public.challans;
 create policy "challans: read all auth"
   on public.challans for select
   to authenticated
   using (true);
 
+drop policy if exists "challans: staff or mgr+ inserts" on public.challans;
 create policy "challans: staff or mgr+ inserts"
   on public.challans for insert
   to authenticated
   with check (pickup_staff_id = auth.uid() or public.is_owner_or_manager());
 
+drop policy if exists "challans: assigned staff or mgr+ updates" on public.challans;
 create policy "challans: assigned staff or mgr+ updates"
   on public.challans for update
   to authenticated
@@ -177,6 +176,7 @@ create policy "challans: assigned staff or mgr+ updates"
     or public.is_owner_or_manager()
   );
 
+drop policy if exists "challans: owner deletes" on public.challans;
 create policy "challans: owner deletes"
   on public.challans for delete
   to authenticated
