@@ -12,6 +12,7 @@ import OwnerDashboard from './pages/owner/Dashboard'
 import Templates from './pages/owner/Templates'
 import TemplateEditor from './pages/owner/TemplateEditor'
 import OwnerLedger from './pages/owner/OwnerLedger'
+import OwnerExpenses from './pages/owner/Expenses'
 
 import ManagerLayout from './pages/manager/ManagerLayout'
 import ManagerHome from './pages/manager/Home'
@@ -20,6 +21,8 @@ import QC from './pages/manager/QC'
 import QCReview from './pages/manager/QCReview'
 import StaffLedger from './pages/manager/StaffLedger'
 import StaffLedgerDetail from './pages/manager/StaffLedgerDetail'
+import ManagerExpenses from './pages/manager/Expenses'
+import ExpenseNew from './pages/manager/ExpenseNew'
 
 import StaffLayout from './pages/staff/StaffLayout'
 import StaffHome from './pages/staff/Home'
@@ -58,6 +61,7 @@ export default function App() {
           <Route path="templates/:id" element={<TemplateEditor />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="ledger" element={<OwnerLedger />} />
+          <Route path="expenses" element={<OwnerExpenses />} />
           <Route path="laundry" element={<Laundry basePath="/owner/laundry" />} />
           <Route path="laundry/new" element={<LaundryNew basePath="/owner/laundry" />} />
           <Route path="laundry/:id" element={<LaundryDetail basePath="/owner/laundry" />} />
@@ -81,6 +85,8 @@ export default function App() {
           <Route path="laundry/:id" element={<LaundryDetail basePath="/manager/laundry" />} />
           <Route path="ledger" element={<StaffLedger />} />
           <Route path="ledger/:staffId" element={<StaffLedgerDetail />} />
+          <Route path="expenses" element={<ManagerExpenses />} />
+          <Route path="expenses/new" element={<ExpenseNew />} />
           <Route path="assign-job" element={<AssignJob />} />
         </Route>
 
